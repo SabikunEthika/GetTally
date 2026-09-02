@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Seller {
+  id        Int       @id @default(autoincrement())
+  name      String
+  email     String    @unique
+  phone     String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  products      Product[]
+  conversations Conversation[]
+  orders        Order[]
+}
+
+model Product {
+  id        Int       @id @default(autoincrement())
+  name      String
+  price     Float
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  sellerId Int
+  seller   Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  orderItems OrderItem[]
+
+  @@index([sellerId])
+}
+
+model Conversation {
+  id        Int       @id @default(autoincrement())
+  platform  String    @default("messenger")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  sellerId Int
+  seller   Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  messages Message[]
+  order    Order?
+
+  @@index([sellerId])
+}
+
+model Message {
+  id        Int       @id @default(autoincrement())
+  content   String
+  type      String    @default("text")
+  createdAt DateTime  @default(now())
+
+  conversationId Int
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+}
+
+model Order {
+  id            Int       @id @default(autoincrement())
+  customerName  String
+  totalPrice    Float
+  status        String    @default("pending")
+  deliveryAddress String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sellerId       Int
+  seller         Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  conversationId Int       @unique
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  orderItems OrderItem[]
+
+  @@index([sellerId])
+  @@index([status])
+}
+
+model OrderItem {
+  id        Int       @id @default(autoincrement())
+  quantity  Int
+  unitPrice Float
+  createdAt DateTime  @default(now())
+
+  orderId Int
+  order   Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId Int
+  product   Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+}
