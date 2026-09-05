@@ -13,7 +13,7 @@ import { OrderService } from './order.service';
 
 @Controller('api/orders')
 export class OrderController {
-  constructor(private readonly orderService: OrderService) {}
+  constructor(private readonly orderService: OrderService) { }
 
   @Post('voice/upload')
   @UseInterceptors(FileInterceptor('audio'))
@@ -81,6 +81,16 @@ export class OrderController {
   @Get('stats/:sellerId')
   async getSellerStats(@Param('sellerId') sellerId: string) {
     const result = await this.orderService.getOrderStats(parseInt(sellerId));
+    return result;
+  }
+
+  @Post('voice/transcribe')
+  async transcribeVoice(@Body('audioFilePath') audioFilePath: string) {
+    if (!audioFilePath) {
+      throw new BadRequestException('audioFilePath is required');
+    }
+
+    const result = await this.orderService.transcribeAudio(audioFilePath);
     return result;
   }
 }
