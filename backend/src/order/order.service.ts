@@ -60,25 +60,77 @@ export class OrderService {
         sellerId: number,
     ) {
         try {
-            const mockExtraction = {
-                customerName: 'Rima',
-                product: 'Printed Kurti',
-                quantity: 2,
-                unitPrice: 1250,
-                deliveryAddress: 'Mirpur',
-                totalPrice: 2500,
-            };
+            const axios = require('axios');
+            const apiKey = process.env.GEMINI_API_KEY;
+
+            if (!apiKey) {
+                return {
+                    success: false,
+                    message: 'Gemini API key not configured',
+                };
+            }
+
+            const prompt = `Extract order information from this transcript. Return ONLY a JSON object with these exact fields (no other text, no markdown, no extra formatting):
+{
+  "customerName": "string",
+  "product": "string",
+  "quantity": number,
+  "unitPrice": number,
+  "deliveryAddress": "string"
+}
+
+Transcript: "${transcript}"
+
+Rules:
+- Extract customer name
+- Extract product name
+- Extract quantity as number
+- Extract unit price in taka as number
+- Extract delivery address
+- Return ONLY valid JSON`;
+
+            const response = await axios.post(
+                `https://generativelanguage.googleapis.com/v1/models/gemini-3.6-flash:generateContent?key=${apiKey}`,
+                {
+                    contents: [
+                        {
+                            parts: [
+                                {
+                                    text: prompt,
+                                },
+                            ],
+                        },
+                    ],
+                },
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                },
+            );
+
+            const content = response.data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+            if (!content) {
+                return {
+                    success: false,
+                    message: 'No response from Gemini',
+                };
+            }
+
+            const extraction = JSON.parse(content);
 
             return {
                 success: true,
-                data: mockExtraction,
-                message: 'Order extracted from transcript',
+                data: extraction,
+                message: 'Order extracted from transcript using Gemini AI',
                 requiresConfirmation: true,
             };
         } catch (error: any) {
+            console.error('Gemini extraction error:', error.message);
             return {
                 success: false,
-                message: 'Error extracting order',
+                message: 'Error extracting order with Gemini',
                 error: error.message || 'Unknown error',
             };
         }
@@ -247,6 +299,68 @@ export class OrderService {
             return {
                 success: false,
                 message: 'Error fetching stats',
+                error: error.message || 'Unknown error',
+            };
+        }
+    }
+
+    async transcribeAudio(audioFilePath: string) {
+        try {
+            const { exec } = require('child_process');
+            const util = require('util');
+            const execPromise = util.promisify(exec);
+            const fs = require('fs');
+            const path = require('path');
+
+            const whisperPath = 'E:\\AUST\\Club\\CSE Carnival 8\\Project Exhibition\\Release\\whisper-cli.exe';
+            const modelPath = 'E:\\AUST\\Club\\CSE Carnival 8\\Project Exhibition\\Release\\models\\ggml-small.bin';
+            const releaseDir = 'E:\\AUST\\Club\\CSE Carnival 8\\Project Exhibition\\Release';
+
+            // Change working directory to Release folder
+            const command = `cd "${releaseDir}" && "${whisperPath}" -m "${modelPath}" -l bn -otxt "${audioFilePath}"`;
+
+            const { stdout, stderr } = await execPromise(command);
+
+            // Whisper saves as: audioFilePath + '.txt'
+            const outputFile = audioFilePath + '.txt';
+
+            console.log('Looking for output file:', outputFile);
+
+            // Check if file exists
+            if (!fs.existsSync(outputFile)) {
+                return {
+                    success: false,
+                    message: 'Output file not created',
+                    error: `File not found: ${outputFile}`,
+                };
+            }
+
+            // Read the output text file
+            const transcript = fs.readFileSync(outputFile, 'utf-8').trim();
+
+            console.log('Transcript:', transcript);
+
+            // Clean up temporary file
+            try {
+                fs.unlinkSync(outputFile);
+            } catch (e) {
+                console.log('Could not delete temp file:', e);
+            }
+
+            return {
+                success: true,
+                message: 'Audio transcribed successfully',
+                data: {
+                    transcript,
+                    language: 'Bengali',
+                    confidence: 'high',
+                },
+            };
+        } catch (error: any) {
+            console.error('Transcription error:', error);
+            return {
+                success: false,
+                message: 'Error transcribing audio',
                 error: error.message || 'Unknown error',
             };
         }
