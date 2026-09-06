@@ -26,7 +26,13 @@ export class OrderService {
                 };
             }
 
-            const filename = `${Date.now()}-${file.originalname}`;
+            // Add proper extension based on mime type
+            let extension = '.webm';
+            if (file.mimetype === 'audio/wav') extension = '.wav';
+            if (file.mimetype === 'audio/mpeg') extension = '.mp3';
+            if (file.mimetype === 'audio/ogg') extension = '.ogg';
+
+            const filename = `${Date.now()}${extension}`;
             const filepath = path.join(this.uploadsDir, filename);
             fs.writeFileSync(filepath, file.buffer);
 
@@ -316,17 +322,29 @@ Rules:
             const modelPath = 'E:\\AUST\\Club\\CSE Carnival 8\\Project Exhibition\\Release\\models\\ggml-small.bin';
             const releaseDir = 'E:\\AUST\\Club\\CSE Carnival 8\\Project Exhibition\\Release';
 
-            // Change working directory to Release folder
-            const command = `cd "${releaseDir}" && "${whisperPath}" -m "${modelPath}" -l bn -otxt "${audioFilePath}"`;
+            // Convert WebM to WAV first
+            const wavPath = audioFilePath.replace(/\.[^/.]+$/, '.wav');
+
+            if (audioFilePath.endsWith('.webm')) {
+                console.log('Converting WebM to WAV...');
+                const convertCommand = `ffmpeg -i "${audioFilePath}" -acodec pcm_s16le -ar 16000 "${wavPath}" -y`;
+                try {
+                    await execPromise(convertCommand);
+                    console.log('Conversion successful');
+                } catch (error: any) {
+                    console.error('FFmpeg conversion error:', error.message);
+                }
+            }
+
+            // Use WAV file for transcription
+            const fileToTranscribe = audioFilePath.endsWith('.webm') ? wavPath : audioFilePath;
+
+            const command = `cd "${releaseDir}" && "${whisperPath}" -m "${modelPath}" -l bn -otxt "${fileToTranscribe}"`;
 
             const { stdout, stderr } = await execPromise(command);
 
-            // Whisper saves as: audioFilePath + '.txt'
-            const outputFile = audioFilePath + '.txt';
+            const outputFile = fileToTranscribe + '.txt';
 
-            console.log('Looking for output file:', outputFile);
-
-            // Check if file exists
             if (!fs.existsSync(outputFile)) {
                 return {
                     success: false,
@@ -335,16 +353,15 @@ Rules:
                 };
             }
 
-            // Read the output text file
             const transcript = fs.readFileSync(outputFile, 'utf-8').trim();
 
-            console.log('Transcript:', transcript);
-
-            // Clean up temporary file
             try {
                 fs.unlinkSync(outputFile);
+                if (audioFilePath.endsWith('.webm')) {
+                    fs.unlinkSync(wavPath);
+                }
             } catch (e) {
-                console.log('Could not delete temp file:', e);
+                console.log('Could not delete temp files');
             }
 
             return {
