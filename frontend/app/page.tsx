@@ -1,54 +1,41 @@
-const stats = [
-  {
-    title: "Total Sales",
-    value: "৳24,500",
-    change: "+12.5%",
-  },
-  {
-    title: "Net Earnings",
-    value: "৳8,420",
-    change: "+8.2%",
-  },
-  {
-    title: "Orders",
-    value: "47",
-    change: "+6 this month",
-  },
-  {
-    title: "Returns",
-    value: "3",
-    change: "6.4% of orders",
-  },
-];
+"use client";
 
-const recentOrders = [
-  {
-    product: "Printed Kurti",
-    customer: "Rima",
-    amount: "৳1,250",
-    status: "Delivered",
-  },
-  {
-    product: "Cotton Hijab",
-    customer: "Nusrat",
-    amount: "৳650",
-    status: "Confirmed",
-  },
-  {
-    product: "Handmade Bag",
-    customer: "Sadia",
-    amount: "৳1,800",
-    status: "Processing",
-  },
-  {
-    product: "Linen Three-Piece",
-    customer: "Mim",
-    amount: "৳2,400",
-    status: "Delivered",
-  },
-];
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function Home() {
+  const router = useRouter();
+  const [stats, setStats] = useState<any>(null);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch stats
+        const statsResponse = await fetch('http://localhost:3001/api/orders/stats/2');
+        const statsData = await statsResponse.json();
+
+        // Fetch recent orders
+        const ordersResponse = await fetch('http://localhost:3001/api/orders/seller/2');
+        const ordersData = await ordersResponse.json();
+
+        if (statsData.success) {
+          setStats(statsData.data);
+        }
+        if (ordersData.success) {
+          setOrders(ordersData.data.slice(0, 4)); // Show last 4 orders
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
   return (
     <main className="min-h-screen bg-[#f7f6f2] text-[#20231f]">
       <div className="mx-auto max-w-7xl px-6 py-8 lg:px-10">
@@ -64,7 +51,7 @@ export default function Home() {
             </p>
           </div>
 
-          <button className="rounded-full bg-[#20231f] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#4f6f52]">
+          <button onClick={() => router.push('/voice')} className="rounded-full bg-[#20231f] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#4f6f52]">
             + Add Order
           </button>
         </header>
@@ -87,22 +74,45 @@ export default function Home() {
 
         {/* Statistics */}
         <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {stats.map((stat) => (
-            <div
-              key={stat.title}
-              className="rounded-3xl bg-white p-6 shadow-sm"
-            >
-              <p className="text-sm text-gray-500">{stat.title}</p>
+          <div className="rounded-3xl bg-white p-6 shadow-sm">
+            <p className="text-sm text-gray-500">Total Sales</p>
+            <p className="mt-3 text-3xl font-bold">
+              ৳{stats?.totalEarnings || 0}
+            </p>
+            <p className="mt-2 text-sm text-[#4f6f52]">
+              {stats?.totalOrders || 0} orders
+            </p>
+          </div>
 
-              <p className="mt-3 text-3xl font-bold">
-                {stat.value}
-              </p>
+          <div className="rounded-3xl bg-white p-6 shadow-sm">
+            <p className="text-sm text-gray-500">Net Earnings</p>
+            <p className="mt-3 text-3xl font-bold">
+              ৳{stats?.totalEarnings || 0}
+            </p>
+            <p className="mt-2 text-sm text-[#4f6f52]">
+              This month
+            </p>
+          </div>
 
-              <p className="mt-2 text-sm text-[#4f6f52]">
-                {stat.change}
-              </p>
-            </div>
-          ))}
+          <div className="rounded-3xl bg-white p-6 shadow-sm">
+            <p className="text-sm text-gray-500">Orders</p>
+            <p className="mt-3 text-3xl font-bold">
+              {stats?.totalOrders || 0}
+            </p>
+            <p className="mt-2 text-sm text-[#4f6f52]">
+              Confirmed
+            </p>
+          </div>
+
+          <div className="rounded-3xl bg-white p-6 shadow-sm">
+            <p className="text-sm text-gray-500">Returns</p>
+            <p className="mt-3 text-3xl font-bold">
+              {stats?.returnedOrders || 0}
+            </p>
+            <p className="mt-2 text-sm text-[#4f6f52]">
+              {stats?.totalOrders > 0 ? `${((stats?.returnedOrders / stats?.totalOrders) * 100).toFixed(1)}%` : '0%'}
+            </p>
+          </div>
         </section>
 
         {/* Main content */}
@@ -156,7 +166,7 @@ export default function Home() {
               everything manually.
             </p>
 
-            <button className="mt-8 w-full rounded-2xl bg-white px-5 py-4 font-semibold text-[#20231f] transition hover:bg-[#dfe8dc]">
+            <button onClick={() => router.push('/voice')} className="mt-8 w-full rounded-2xl bg-white px-5 py-4 font-semibold text-[#20231f] transition hover:bg-[#dfe8dc]">
               🎙 Log by Voice
             </button>
           </div>
@@ -189,30 +199,41 @@ export default function Home() {
               </thead>
 
               <tbody>
-                {recentOrders.map((order) => (
-                  <tr
-                    key={`${order.customer}-${order.product}`}
-                    className="border-b last:border-0"
-                  >
-                    <td className="py-5 font-medium">
-                      {order.product}
-                    </td>
-
-                    <td className="py-5 text-gray-500">
-                      {order.customer}
-                    </td>
-
-                    <td className="py-5 font-semibold">
-                      {order.amount}
-                    </td>
-
-                    <td className="py-5">
-                      <span className="rounded-full bg-[#eef3eb] px-3 py-1 text-xs font-semibold text-[#4f6f52]">
-                        {order.status}
-                      </span>
+                {loading ? (
+                  <tr>
+                    <td colSpan={4} className="py-5 text-center text-gray-500">
+                      Loading orders...
                     </td>
                   </tr>
-                ))}
+                ) : orders.length > 0 ? (
+                  orders.map((order, index) => (
+                    <tr key={index} className="border-b last:border-0">
+                      <td className="py-5 font-medium">
+                        {order.orderItems?.[0]?.product?.name || 'N/A'}
+                      </td>
+
+                      <td className="py-5 text-gray-500">
+                        {order.customerName}
+                      </td>
+
+                      <td className="py-5 font-semibold">
+                        ৳{order.totalPrice}
+                      </td>
+
+                      <td className="py-5">
+                        <span className="rounded-full bg-[#eef3eb] px-3 py-1 text-xs font-semibold text-[#4f6f52]">
+                          {order.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={4} className="py-5 text-center text-gray-500">
+                      No orders yet
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
