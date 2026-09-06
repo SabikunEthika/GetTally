@@ -169,6 +169,13 @@ export default function Home() {
             <button onClick={() => router.push('/voice')} className="mt-8 w-full rounded-2xl bg-white px-5 py-4 font-semibold text-[#20231f] transition hover:bg-[#dfe8dc]">
               🎙 Log by Voice
             </button>
+
+            <button
+              onClick={() => router.push('/chat')}
+              className="rounded-full border border-gray-200 bg-black px-5 py-3 text-sm font-semibold transition"
+            >
+              💬 Log from Chat
+            </button>
           </div>
         </section>
 
