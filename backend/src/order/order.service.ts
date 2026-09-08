@@ -327,12 +327,14 @@ Rules:
 
             if (audioFilePath.endsWith('.webm')) {
                 console.log('Converting WebM to WAV...');
-                const convertCommand = `ffmpeg -i "${audioFilePath}" -acodec pcm_s16le -ar 16000 "${wavPath}" -y`;
+                const ffmpegPath = 'D:\\ffmpeg\\ffmpeg-2026-09-02-git-9fc8c785e2-full_build\\bin\\ffmpeg.exe';
+                const convertCommand = `"${ffmpegPath}" -i "${audioFilePath}" -acodec pcm_s16le -ar 16000 "${wavPath}" -y`;
                 try {
                     await execPromise(convertCommand);
-                    console.log('Conversion successful');
+                    console.log('✅ Conversion successful. WAV file:', wavPath);
                 } catch (error: any) {
-                    console.error('FFmpeg conversion error:', error.message);
+                    console.error('❌ FFmpeg error:', error.message);
+                    console.error('FFmpeg stderr:', error.stderr);
                 }
             }
 

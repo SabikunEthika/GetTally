@@ -133,31 +133,91 @@ Customer: Perfect! I'll take them`;
 
                     {/* Extracted Order */}
                     {extractedOrder && (
-                        <div className="rounded-2xl bg-white p-6 shadow-md border-2 border-[#4f6f52]">
+                        <div className="mx-auto mt-8 max-w-xl rounded-2xl bg-white p-6 shadow-md border-2 border-[#4f6f52]">
                             <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-[#4f6f52]">
-                                📋 Order Confirmation
+                                📋 Order Confirmation - Review & Edit
                             </p>
 
                             <div className="space-y-4 text-left">
                                 <div>
                                     <label className="text-xs text-gray-500">Customer Name</label>
-                                    <p className="text-lg font-semibold">{extractedOrder.customerName || 'N/A'}</p>
+                                    <input
+                                        type="text"
+                                        value={extractedOrder.customerName || ''}
+                                        onChange={(e) =>
+                                            setExtractedOrder({
+                                                ...extractedOrder,
+                                                customerName: e.target.value,
+                                            })
+                                        }
+                                        className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-lg font-semibold focus:border-[#4f6f52] focus:outline-none"
+                                    />
                                 </div>
+
                                 <div>
                                     <label className="text-xs text-gray-500">Product</label>
-                                    <p className="text-lg font-semibold">{extractedOrder.product || 'N/A'}</p>
+                                    <input
+                                        type="text"
+                                        value={extractedOrder.product || ''}
+                                        onChange={(e) =>
+                                            setExtractedOrder({
+                                                ...extractedOrder,
+                                                product: e.target.value,
+                                            })
+                                        }
+                                        className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-lg font-semibold focus:border-[#4f6f52] focus:outline-none"
+                                    />
                                 </div>
+
                                 <div>
                                     <label className="text-xs text-gray-500">Quantity</label>
-                                    <p className="text-lg font-semibold">{extractedOrder.quantity || 0}</p>
+                                    <input
+                                        type="number"
+                                        value={extractedOrder.quantity || 0}
+                                        onChange={(e) =>
+                                            setExtractedOrder({
+                                                ...extractedOrder,
+                                                quantity: parseInt(e.target.value) || 0,
+                                            })
+                                        }
+                                        className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-lg font-semibold focus:border-[#4f6f52] focus:outline-none"
+                                    />
                                 </div>
+
                                 <div>
-                                    <label className="text-xs text-gray-500">Unit Price</label>
-                                    <p className="text-lg font-semibold">৳{extractedOrder.unitPrice || 0}</p>
+                                    <label className="text-xs text-gray-500">Unit Price (৳)</label>
+                                    <input
+                                        type="number"
+                                        value={extractedOrder.unitPrice || 0}
+                                        onChange={(e) =>
+                                            setExtractedOrder({
+                                                ...extractedOrder,
+                                                unitPrice: parseInt(e.target.value) || 0,
+                                            })
+                                        }
+                                        className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-lg font-semibold focus:border-[#4f6f52] focus:outline-none"
+                                    />
                                 </div>
+
                                 <div>
                                     <label className="text-xs text-gray-500">Delivery Address</label>
-                                    <p className="text-lg font-semibold">{extractedOrder.deliveryAddress || 'N/A'}</p>
+                                    <input
+                                        type="text"
+                                        value={extractedOrder.deliveryAddress || ''}
+                                        onChange={(e) =>
+                                            setExtractedOrder({
+                                                ...extractedOrder,
+                                                deliveryAddress: e.target.value,
+                                            })
+                                        }
+                                        className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-lg font-semibold focus:border-[#4f6f52] focus:outline-none"
+                                    />
+                                </div>
+
+                                <div className="rounded-lg bg-[#f7f6f2] p-3 mt-4">
+                                    <p className="text-sm text-gray-600">
+                                        <strong>Total:</strong> ৳{(extractedOrder.quantity || 0) * (extractedOrder.unitPrice || 0)}
+                                    </p>
                                 </div>
                             </div>
 
@@ -166,7 +226,7 @@ Customer: Perfect! I'll take them`;
                                     onClick={() => confirmOrder(extractedOrder)}
                                     className="flex-1 rounded-2xl bg-[#4f6f52] px-4 py-3 font-semibold text-white transition hover:bg-[#20231f]"
                                 >
-                                    ✅ Confirm
+                                    ✅ Confirm Order
                                 </button>
                                 <button
                                     onClick={() => setExtractedOrder(null)}
