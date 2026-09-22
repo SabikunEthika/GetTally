@@ -1,0 +1,17 @@
+"use client";
+
+import { FormEvent, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { apiFetch, logout } from "../../lib/api";
+
+type Profile = { name: string; email: string; phone: string; businessName?: string | null; city?: string | null; bio?: string | null; monthlyGoal?: number | null; profileComplete?: boolean };
+
+export default function ProfilePage() {
+  const router = useRouter(); const [profile, setProfile] = useState<Profile | null>(null); const [message, setMessage] = useState(""); const [error, setError] = useState(""); const [loading, setLoading] = useState(true);
+  useEffect(() => { void apiFetch("/api/auth/me").then(async (response) => { if (!response.ok) { router.replace("/login"); return; } setProfile(await response.json()); setLoading(false); }); }, [router]);
+  const save = async (event: FormEvent) => { event.preventDefault(); if (!profile) return; setMessage(""); setError(""); const response = await apiFetch("/api/auth/profile", { method: "PATCH", body: JSON.stringify({ ...profile, monthlyGoal: profile.monthlyGoal ? Number(profile.monthlyGoal) : 0, profileComplete: true }) }); const data = await response.json(); if (!response.ok) setError(data.message || "Could not save profile"); else { setProfile(data); setMessage("Profile saved"); } };
+  const signOut = async () => { await logout(); router.replace("/login"); };
+  if (loading || !profile) return <main className="min-h-screen bg-[#f7f6f2] p-8 text-gray-500">Loading profile…</main>;
+  const field = (key: keyof Profile, label: string, type = "text") => <label className="block text-sm font-medium">{label}<input type={type} value={String(profile[key] ?? "")} onChange={(e) => setProfile({ ...profile, [key]: type === "number" ? Number(e.target.value) : e.target.value })} className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3" /></label>;
+  return <main className="min-h-screen bg-[#f7f6f2] px-6 py-8 text-[#20231f]"><div className="mx-auto max-w-3xl"><header className="flex items-center justify-between"><div><p className="text-sm font-semibold text-[#4f6f52]">Your account</p><h1 className="mt-1 text-3xl font-bold">Profile setup</h1></div><div className="flex gap-2"><button onClick={() => router.push("/")} className="rounded-full border border-gray-200 bg-white px-4 py-2 text-sm">Dashboard</button><button onClick={() => void signOut()} className="rounded-full bg-[#20231f] px-4 py-2 text-sm text-white">Log out</button></div></header><form onSubmit={save} className="mt-8 space-y-5 rounded-3xl bg-white p-8 shadow-sm">{message && <p className="rounded-xl bg-[#eef3eb] p-3 text-sm text-[#4f6f52]">{message}</p>}{error && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}<div className="grid gap-5 sm:grid-cols-2">{field("name", "Your name")}{field("businessName", "Business name")}{field("phone", "Phone number")}{field("city", "City")}</div>{field("monthlyGoal", "Monthly sales goal (৳)", "number")}<label className="block text-sm font-medium">About your business<textarea value={profile.bio ?? ""} onChange={(e) => setProfile({ ...profile, bio: e.target.value })} rows={4} placeholder="What do you sell?" className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3" /></label><p className="text-xs text-gray-400">Gmail: {profile.email} · Your phone and Gmail are used for account identity.</p><button className="rounded-2xl bg-[#4f6f52] px-6 py-3 font-semibold text-white">Save profile</button></form></div></main>;
+}
