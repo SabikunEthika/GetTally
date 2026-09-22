@@ -6,12 +6,17 @@ import {
   UseInterceptors,
   UploadedFile,
   Param,
+  Patch,
   BadRequestException,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { OrderService } from './order.service';
+import { AuthGuard } from '../auth/auth.guard';
 
 @Controller('api/orders')
+@UseGuards(AuthGuard)
 export class OrderController {
   constructor(private readonly orderService: OrderService) { }
 
@@ -19,15 +24,11 @@ export class OrderController {
   @UseInterceptors(FileInterceptor('audio'))
   async uploadVoiceOrder(
     @UploadedFile() file: any,
-    @Body('sellerId') sellerId: string,
+    @Req() request: { user: { sellerId: number } },
   ) {
-    if (!sellerId) {
-      throw new BadRequestException('sellerId is required');
-    }
-
     const result = await this.orderService.uploadVoiceOrder(
       file,
-      parseInt(sellerId),
+      request.user.sellerId,
     );
     return result;
   }
@@ -35,15 +36,15 @@ export class OrderController {
   @Post('extract')
   async extractOrder(
     @Body('transcript') transcript: string,
-    @Body('sellerId') sellerId: string,
+    @Req() request: { user: { sellerId: number } },
   ) {
-    if (!transcript || !sellerId) {
-      throw new BadRequestException('transcript and sellerId are required');
+    if (!transcript) {
+      throw new BadRequestException('transcript is required');
     }
 
     const result = await this.orderService.extractOrderFromTranscript(
       transcript,
-      parseInt(sellerId),
+      request.user.sellerId,
     );
     return result;
   }
@@ -55,33 +56,49 @@ export class OrderController {
       product: string;
       quantity: number;
       unitPrice: number;
+      costPrice?: number;
       deliveryAddress: string;
     },
-    @Body('sellerId') sellerId: string,
+    @Req() request: { user: { sellerId: number } },
   ) {
-    if (!orderData || !sellerId) {
-      throw new BadRequestException('orderData and sellerId are required');
+    if (!orderData) {
+      throw new BadRequestException('orderData is required');
     }
 
     const result = await this.orderService.confirmAndSaveOrder(
       orderData,
-      parseInt(sellerId),
+      request.user.sellerId,
     );
     return result;
   }
 
+  @Patch(':orderId/status')
+  async updateStatus(
+    @Param('orderId') orderId: string,
+    @Body('status') status: string,
+    @Body('returnReason') returnReason?: string,
+    @Req() request?: { user: { sellerId: number } },
+  ) {
+    return this.orderService.updateOrderStatus(parseInt(orderId), request!.user.sellerId, status, returnReason);
+  }
+
   @Get('seller/:sellerId')
-  async getSellerOrders(@Param('sellerId') sellerId: string) {
+  async getSellerOrders(@Param('sellerId') sellerId: string, @Req() request: { user: { sellerId: number } }) {
     const result = await this.orderService.getOrdersForSeller(
-      parseInt(sellerId),
+      request.user.sellerId,
     );
     return result;
   }
 
   @Get('stats/:sellerId')
-  async getSellerStats(@Param('sellerId') sellerId: string) {
-    const result = await this.orderService.getOrderStats(parseInt(sellerId));
+  async getSellerStats(@Param('sellerId') _sellerId: string, @Req() request: { user: { sellerId: number } }) {
+    const result = await this.orderService.getOrderStats(request.user.sellerId);
     return result;
+  }
+
+  @Get('report/:sellerId')
+  async getReport(@Param('sellerId') _sellerId: string, @Req() request: { user: { sellerId: number } }) {
+    return this.orderService.getReport(request.user.sellerId);
   }
 
   @Post('voice/transcribe')

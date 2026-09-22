@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { apiFetch } from "../../lib/api";
 
 export default function ChatPage() {
     const router = useRouter();
@@ -25,22 +26,24 @@ Customer: Perfect! I'll take them`;
         setIsAnalyzing(true);
 
         try {
-            const response = await fetch('http://localhost:3001/api/orders/extract', {
+            const response = await apiFetch('/api/orders/extract', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     transcript: chatText,
-                    sellerId: '2'
                 }),
             });
 
             const data = await response.json();
             console.log('Extract response:', data);
 
-            if (data.success) {
+            if (data.success && data.isOrderCandidate) {
                 setExtractedOrder(data.data);
+            } else if (data.success) {
+                setExtractedOrder(null);
+                alert(`This looks like ${data.data?.intent || 'an inquiry'}, not a confirmed order yet. ${data.data?.reason || 'Ask the buyer to confirm before saving.'}`);
             } else {
-                alert('Could not extract order from chat');
+                alert(data.message || 'Could not extract order from chat');
             }
         } catch (error) {
             console.error('Error:', error);
@@ -52,12 +55,11 @@ Customer: Perfect! I'll take them`;
 
     const confirmOrder = async (orderData: any) => {
         try {
-            const response = await fetch('http://localhost:3001/api/orders/confirm', {
+            const response = await apiFetch('/api/orders/confirm', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     orderData,
-                    sellerId: '2'
                 }),
             });
 
@@ -67,7 +69,7 @@ Customer: Perfect! I'll take them`;
                 alert(`✅ Order saved! ID: ${data.orderId}`);
                 setExtractedOrder(null);
                 setChatText('');
-            }
+            } else alert(data.message || 'Error confirming order');
         } catch (error) {
             console.error('Confirm error:', error);
             alert('Error confirming order');
@@ -197,6 +199,11 @@ Customer: Perfect! I'll take them`;
                                         }
                                         className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-lg font-semibold focus:border-[#4f6f52] focus:outline-none"
                                     />
+                                </div>
+
+                                <div>
+                                    <label className="text-xs text-gray-500">Product Cost (optional)</label>
+                                    <input type="number" value={extractedOrder.costPrice || ''} onChange={(e) => setExtractedOrder({ ...extractedOrder, costPrice: e.target.value ? Number(e.target.value) : undefined })} placeholder="Used to calculate profit" className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-lg font-semibold focus:border-[#4f6f52] focus:outline-none" />
                                 </div>
 
                                 <div>
