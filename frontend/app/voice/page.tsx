@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { apiFetch } from "../../lib/api";
 
 export default function VoicePage() {
   const [isRecording, setIsRecording] = useState(false);
@@ -13,12 +14,11 @@ export default function VoicePage() {
 
   const confirmOrder = async (orderData: any) => {
     try {
-      const response = await fetch('http://localhost:3001/api/orders/confirm', {
+      const response = await apiFetch('/api/orders/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           orderData,
-          sellerId: '2'
         }),
       });
 
@@ -69,10 +69,9 @@ export default function VoicePage() {
         try {
           const formData = new FormData();
           formData.append('audio', audioBlob);
-          formData.append('sellerId', '2');
 
           // Step 1: Upload audio
-          const uploadResponse = await fetch('http://localhost:3001/api/orders/voice/upload', {
+          const uploadResponse = await apiFetch('/api/orders/voice/upload', {
             method: 'POST',
             body: formData,
           });
@@ -89,7 +88,7 @@ export default function VoicePage() {
           const audioFilePath = uploadData.data.filepath;
 
           // Step 2: Transcribe audio
-          const transcribeResponse = await fetch('http://localhost:3001/api/orders/voice/transcribe', {
+          const transcribeResponse = await apiFetch('/api/orders/voice/transcribe', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ audioFilePath }),
@@ -107,22 +106,23 @@ export default function VoicePage() {
           const transcript = transcribeData.data.transcript;
 
           // Step 3: Extract order from transcript
-          const extractResponse = await fetch('http://localhost:3001/api/orders/extract', {
+          const extractResponse = await apiFetch('/api/orders/extract', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               transcript,
-              sellerId: '2'
             }),
           });
 
           const extractData = await extractResponse.json();
           console.log('Extract response:', extractData);
 
-          if (extractData.success) {
+          if (extractData.success && extractData.isOrderCandidate) {
             setExtractedOrder(extractData.data);
+          } else if (extractData.success) {
+            alert(`The recording looks like ${extractData.data?.intent || 'an inquiry'}, not a confirmed order yet.`);
           } else {
-            alert('Error extracting order');
+            alert(extractData.message || 'Error extracting order');
           }
 
         } catch (error) {
@@ -309,6 +309,11 @@ export default function VoicePage() {
                       }
                       className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-lg font-semibold focus:border-[#4f6f52] focus:outline-none"
                     />
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-gray-500">Product Cost (optional)</label>
+                    <input type="number" value={extractedOrder.costPrice || ''} onChange={(e) => setExtractedOrder({ ...extractedOrder, costPrice: e.target.value ? Number(e.target.value) : undefined })} placeholder="Used to calculate profit" className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-lg font-semibold focus:border-[#4f6f52] focus:outline-none" />
                   </div>
 
                   <div>
